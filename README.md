@@ -33,3 +33,7 @@ jobs:
     uses: sharkops-io/.github/.github/workflows/image.yml@main
     permissions: { contents: read, packages: write }
 ```
+
+## License
+
+Apache License 2.0. See [LICENSE](LICENSE).

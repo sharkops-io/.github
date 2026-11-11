@@ -1,0 +1,15 @@
+# This repo's own checks, using its own reusable workflow so a change to it is
+# exercised before every other repo picks it up from @main.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  secret-scan:
+    uses: ./.github/workflows/secret-scan.yml
