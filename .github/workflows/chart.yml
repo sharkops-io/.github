@@ -1,0 +1,91 @@
+# Reusable: lint, unit-test and publish a Helm chart, ported from the sharkops
+# charts' own .gitlab-ci.yml files (which were all the same four jobs).
+#
+#   every run   helm lint + template; every examples/*.yaml rendered;
+#               helm-unittest --strict when tests/ exists
+#   tag X.Y.Z   helm package --version X.Y.Z, pushed to
+#               oci://ghcr.io/<owner>/charts/<chart name>
+#
+# Consumers then need ONE helmfile repository for every chart:
+#   - name: sharkops-io
+#     url: ghcr.io/sharkops-io/charts
+#     oci: true
+#
+# Callers:
+#   jobs:
+#     chart:
+#       uses: sharkops-io/.github/.github/workflows/chart.yml@main
+#       permissions: { contents: read, packages: write }
+name: chart
+
+on:
+  workflow_call:
+    inputs:
+      helm-version:
+        type: string
+        default: v4.3.1
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5
+        with:
+          version: ${{ inputs.helm-version }}
+      - name: helm lint + template
+        run: |
+          helm lint .
+          helm template test-release . --debug > /dev/null
+      - name: Render every example
+        run: |
+          shopt -s nullglob
+          for f in examples/*.yaml; do
+            echo "rendering $f"
+            helm template test-release . -f "$f" > /dev/null
+          done
+
+  unittest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5
+        with:
+          version: ${{ inputs.helm-version }}
+      - name: helm-unittest
+        run: |
+          if [ ! -d tests ]; then echo "no tests/, skipping"; exit 0; fi
+          # Helm 4 verifies plugins by default and a git source carries no
+          # provenance to verify; Helm 3 does not know the flag.
+          helm plugin install https://github.com/helm-unittest/helm-unittest --verify=false \
+            || helm plugin install https://github.com/helm-unittest/helm-unittest
+          helm unittest --strict -f 'tests/*.yaml' .
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [lint, unittest]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5
+        with:
+          version: ${{ inputs.helm-version }}
+      - name: Package and push
+        env:
+          VERSION: ${{ github.ref_name }}
+          OWNER: ${{ github.repository_owner }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          # Tags are plain X.Y.Z, as on GitLab; the tag IS the chart version.
+          echo "$GH_TOKEN" | helm registry login ghcr.io -u "$ACTOR" --password-stdin
+          helm package . --version "$VERSION"
+          helm push ./*.tgz "oci://ghcr.io/${OWNER}/charts"
