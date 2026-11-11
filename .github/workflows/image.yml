@@ -16,9 +16,13 @@ name: image
 on:
   workflow_call:
     inputs:
+      # Both, so the images run on arm64 hosts too (Pi, Apple silicon). A Go
+      # Dockerfile that builds `FROM --platform=$BUILDPLATFORM` with
+      # GOOS/GOARCH from TARGETOS/TARGETARCH cross-compiles natively; QEMU
+      # below only runs RUN steps in the target stage, if any.
       platforms:
         type: string
-        default: linux/amd64
+        default: linux/amd64,linux/arm64
       context:
         type: string
         default: .
@@ -71,3 +75,9 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Show the published platforms
+        if: github.event_name != 'pull_request'
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: docker buildx imagetools inspect "$(echo "$TAGS" | head -n1)"
