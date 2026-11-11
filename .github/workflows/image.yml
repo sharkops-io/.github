@@ -1,0 +1,71 @@
+# Reusable: build a container image and publish it to GHCR, ported from
+# sharkops/gitlab-ci-common-config docker/build.yml (Kaniko -> Buildx).
+#
+# Tags, as on GitLab:
+#   pull_request  build only, nothing pushed (fork PRs have no token anyway)
+#   main          :main and :sha-<short>
+#   tag vX.Y.Z    :vX.Y.Z and :latest       <- what deploy repos pin
+#
+# Callers:
+#   jobs:
+#     image:
+#       uses: sharkops-io/.github/.github/workflows/image.yml@main
+#       permissions: { contents: read, packages: write }
+name: image
+
+on:
+  workflow_call:
+    inputs:
+      platforms:
+        type: string
+        default: linux/amd64
+      context:
+        type: string
+        default: .
+      image:
+        description: Defaults to ghcr.io/<owner>/<repo>
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-qemu-action@v4
+        if: contains(inputs.platforms, ',')
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ inputs.image != '' && inputs.image || format('ghcr.io/{0}', github.repository) }}
+          tags: |
+            type=ref,event=branch
+            type=sha
+            type=ref,event=tag
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/') }}
+          flavor: latest=false
+
+      - uses: docker/build-push-action@v7
+        with:
+          context: ${{ inputs.context }}
+          platforms: ${{ inputs.platforms }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

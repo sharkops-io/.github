@@ -1,0 +1,27 @@
+# Reusable: check and unit-test an exporter's example alert rules, ported from
+# sharkops/gitlab-ci-common-config prometheus/rules.yml. Skips cleanly when the
+# repo has no examples/rules.yaml.
+#
+# Callers:  jobs: { rules: { uses: sharkops-io/.github/.github/workflows/promtool.yml@main } }
+name: promtool
+
+on:
+  workflow_call: {}
+
+permissions:
+  contents: read
+
+jobs:
+  rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: promtool check + test
+        run: |
+          if [ ! -f examples/rules.yaml ]; then
+            echo "no examples/rules.yaml, nothing to check"
+            exit 0
+          fi
+          docker run --rm -v "$PWD/examples:/rules" -w /rules --entrypoint sh prom/prometheus:latest \
+            -c 'promtool check rules rules.yaml && promtool test rules rules_test.yaml'
