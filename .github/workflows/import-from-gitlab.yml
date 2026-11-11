@@ -1,0 +1,55 @@
+# Reusable, one-off: copy existing release tags from the GitLab registry to
+# GHCR with crane, byte for byte (same digests, no rebuild), so deploy repos can
+# switch registry without any version moving. Run by the repo that will own the
+# package, so GHCR links the package to that repo.
+#
+# Callers (workflow_dispatch only; delete the caller after the migration):
+#   jobs:
+#     import:
+#       uses: sharkops-io/.github/.github/workflows/import-from-gitlab.yml@main
+#       with: { source: registry.gitlab.com/sharkops/exporters/adguard-exporter }
+#       permissions: { contents: read, packages: write }
+name: import-from-gitlab
+
+on:
+  workflow_call:
+    inputs:
+      source:
+        description: GitLab registry repository to copy from
+        type: string
+        required: true
+      destination:
+        description: Defaults to ghcr.io/<owner>/<repo>
+        type: string
+        default: ""
+      tag-pattern:
+        description: Extended regex of tags to copy (releases and latest by default)
+        type: string
+        default: '^(v?[0-9]+\.[0-9]+\.[0-9]+|latest)$'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  copy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: imjasonh/setup-crane@v0.7
+      - name: Copy tags
+        env:
+          SRC: ${{ inputs.source }}
+          DEST: ${{ inputs.destination != '' && inputs.destination || format('ghcr.io/{0}', github.repository) }}
+          PATTERN: ${{ inputs.tag-pattern }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          echo "$GH_TOKEN" | crane auth login ghcr.io -u "$ACTOR" --password-stdin
+          tags=$(crane ls "$SRC" | grep -E "$PATTERN" || true)
+          [ -n "$tags" ] || { echo "no tags in $SRC match $PATTERN" >&2; exit 1; }
+          for t in $tags; do
+            crane copy "$SRC:$t" "$DEST:$t"
+            echo "$t  $(crane digest "$SRC:$t")  ->  $(crane digest "$DEST:$t")"
+          done
