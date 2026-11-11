@@ -24,10 +24,13 @@ on:
       helm-version:
         type: string
         default: v4.3.1
+      unittest-version:
+        type: string
+        default: v1.2.1
 
+# Least privilege: only the publish job can write packages.
 permissions:
   contents: read
-  packages: write
 
 jobs:
   lint:
@@ -35,6 +38,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: azure/setup-helm@v5
         with:
           version: ${{ inputs.helm-version }}
@@ -55,25 +60,35 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: azure/setup-helm@v5
         with:
           version: ${{ inputs.helm-version }}
       - name: helm-unittest
+        env:
+          UNITTEST_VERSION: ${{ inputs.unittest-version }}
         run: |
           if [ ! -d tests ]; then echo "no tests/, skipping"; exit 0; fi
           # Helm 4 verifies plugins by default and a git source carries no
           # provenance to verify; Helm 3 does not know the flag.
-          helm plugin install https://github.com/helm-unittest/helm-unittest --verify=false \
-            || helm plugin install https://github.com/helm-unittest/helm-unittest
+          # Pinned to a release tag, never the moving default branch.
+          helm plugin install https://github.com/helm-unittest/helm-unittest --version "$UNITTEST_VERSION" --verify=false \
+            || helm plugin install https://github.com/helm-unittest/helm-unittest --version "$UNITTEST_VERSION"
           helm unittest --strict -f 'tests/*.yaml' .
 
   publish:
     if: startsWith(github.ref, 'refs/tags/')
     needs: [lint, unittest]
+    permissions:
+      contents: read
+      packages: write
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: azure/setup-helm@v5
         with:
           version: ${{ inputs.helm-version }}

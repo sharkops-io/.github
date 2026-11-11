@@ -23,6 +23,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: golangci-lint
         # The official image, as on GitLab, so the linter version is the pin
         # above and not whatever an action resolves.
@@ -38,6 +40,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@v7
         with:
           go-version: ${{ inputs.go-version }}
