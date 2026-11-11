@@ -1,0 +1,44 @@
+# Reusable: the whole pipeline for a Prometheus exporter repo, so every
+# exporter's own ci.yml is one call to this file and they cannot drift.
+#
+#   secret-scan  gitleaks over full history
+#   go           golangci-lint + go test -race
+#   rules        promtool check/test on examples/rules.yaml (skips if absent)
+#   image        amd64+arm64 to ghcr.io/<repo>; pushes on main and vX.Y.Z tags
+#
+# Caller (the entire file):
+#   name: ci
+#   on:
+#     pull_request:
+#     push:
+#       branches: [main]
+#       tags: ["v*"]
+#   permissions:
+#     contents: read
+#   jobs:
+#     ci:
+#       uses: sharkops-io/.github/.github/workflows/exporter.yml@main
+#       permissions:
+#         contents: read
+#         packages: write
+name: exporter
+
+on:
+  workflow_call: {}
+
+permissions:
+  contents: read
+
+jobs:
+  secret-scan:
+    uses: sharkops-io/.github/.github/workflows/secret-scan.yml@main
+  go:
+    uses: sharkops-io/.github/.github/workflows/go.yml@main
+  rules:
+    uses: sharkops-io/.github/.github/workflows/promtool.yml@main
+  image:
+    needs: [secret-scan, go, rules]
+    uses: sharkops-io/.github/.github/workflows/image.yml@main
+    permissions:
+      contents: read
+      packages: write

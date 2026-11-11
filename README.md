@@ -11,6 +11,7 @@ short caller; no build steps are copied into repos.
 | `chart.yml` | helm lint/template, examples, helm-unittest; on a `X.Y.Z` tag pushes to `oci://ghcr.io/sharkops-io/charts` | each chart's `.gitlab-ci.yml` |
 | `import-from-gitlab.yml` | One-off crane copy of release tags from registry.gitlab.com, same digests | (migration only) |
 | `promtool.yml` | `promtool check/test` on `examples/rules.yaml` when present | `prometheus/rules.yml` |
+| `exporter.yml` | The whole exporter pipeline: secret-scan, go, promtool, then image. Each exporter's `ci.yml` is one call to it | (new) |
 
 A caller, for an exporter:
 
