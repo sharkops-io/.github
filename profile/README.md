@@ -1,4 +1,4 @@
-Open-source building blocks from a Kubernetes cluster run through GitOps:
+Open-source building blocks for running services on Kubernetes with GitOps:
 Helm charts, Prometheus exporters and CI images. Everything here is
 Apache-2.0 licensed.
 
