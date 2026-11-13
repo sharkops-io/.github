@@ -33,6 +33,7 @@ helm install app oci://ghcr.io/sharkops-io/charts/sharkops-universal --version <
 |---|---|
 | [k8s-cli-tools](https://github.com/sharkops-io/k8s-cli-tools) | Multi-arch CI image with kubectl, Helm, helmfile, kustomize and the Rancher CLI |
 | [docker-api-gateway](https://github.com/sharkops-io/docker-api-gateway) | A read-only slice of the Docker Engine API behind a bearer token |
+| [alertmanager-github-issues](https://github.com/sharkops-io/alertmanager-github-issues) | Alertmanager webhook receiver: one GitHub issue per firing alert group, closed on resolve |
 | [.github](https://github.com/sharkops-io/.github) | The shared GitHub Actions workflows every repo here calls |
 
 Images are on GHCR under `ghcr.io/sharkops-io/<repo>`.
