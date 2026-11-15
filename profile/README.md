@@ -1,6 +1,7 @@
 Open-source building blocks for running services on Kubernetes with GitOps:
-Helm charts, Prometheus exporters and CI images. Everything here is
-Apache-2.0 licensed.
+Helm charts, Prometheus exporters and CI images, plus an accessible Angular
+data table. Everything here is Apache-2.0 licensed, except shark-ng-table,
+which is MIT.
 
 ### Helm charts
 
@@ -37,3 +38,9 @@ helm install app oci://ghcr.io/sharkops-io/charts/sharkops-universal --version <
 | [.github](https://github.com/sharkops-io/.github) | The shared GitHub Actions workflows every repo here calls |
 
 Images are on GHCR under `ghcr.io/sharkops-io/<repo>`.
+
+### Angular
+
+| Library | What it is |
+|---|---|
+| [shark-ng-table](https://github.com/sharkops-io/shark-ng-table) | A data table built for keyboard and screen reader users. [Docs and examples](https://shark-ng-table.sharkops.io/), `npm install shark-ng-table` |
