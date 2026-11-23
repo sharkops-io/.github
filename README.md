@@ -8,7 +8,8 @@ short caller; no build steps are copied into repos.
 | `secret-scan.yml` | gitleaks over full history, with the hex-credential and YAML name/value rules; optional `runs-on` input (default `ubuntu-latest`) | `security/secret-scan.yml` |
 | `go.yml` | golangci-lint + `go test -race` | `go/ci.yml` |
 | `image.yml` | Buildx build for amd64 and arm64; push to GHCR on main (`:main`, `:sha-*`) and tags (`:vX`, `:latest`) | `docker/build.yml` |
-| `chart.yml` | helm lint/template, examples, helm-unittest; on a `X.Y.Z` tag pushes to `oci://ghcr.io/sharkops-io/charts` | each chart's `.gitlab-ci.yml` |
+| `chart.yml` | helm lint/template, examples, helm-unittest; on a `X.Y.Z` (or `vX.Y.Z`) tag pushes to `oci://ghcr.io/sharkops-io/charts`; `path` input for a chart outside the repo root | each chart's `.gitlab-ci.yml` |
+| `python.yml` | `python -m unittest discover` in the `tests` input directory, standard library only | (new) |
 | `import-from-gitlab.yml` | One-off crane copy of release tags from registry.gitlab.com, same digests | (migration only) |
 | `promtool.yml` | `promtool check/test` on `examples/rules.yaml` when present | `prometheus/rules.yml` |
 | `exporter.yml` | The whole exporter pipeline: secret-scan, go, promtool, then image. Each exporter's `ci.yml` is one call to it | (new) |
