@@ -5,6 +5,10 @@
 #               helm-unittest --strict when tests/ exists
 #   tag X.Y.Z   helm package --version X.Y.Z, pushed to
 #               oci://ghcr.io/<owner>/charts/<chart name>
+#               (a tag vX.Y.Z gives chart version X.Y.Z, for a repo that
+#               releases an image and its chart from one tag)
+#
+# `path` is the chart's directory, for a repo whose chart is not at its root.
 #
 # Consumers then need ONE helmfile repository for every chart:
 #   - name: sharkops-io
@@ -27,6 +31,10 @@ on:
       unittest-version:
         type: string
         default: v1.2.1
+      path:
+        description: The chart's directory
+        type: string
+        default: .
 
 # Least privilege: only the publish job can write packages.
 permissions:
@@ -36,6 +44,9 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ${{ inputs.path }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -58,6 +69,9 @@ jobs:
   unittest:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ${{ inputs.path }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -85,6 +99,9 @@ jobs:
       packages: write
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ${{ inputs.path }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -101,6 +118,8 @@ jobs:
         run: |
           set -euo pipefail
           # Tags are plain X.Y.Z, as on GitLab; the tag IS the chart version.
+          # A leading v is dropped (vX.Y.Z -> X.Y.Z): Helm versions have none.
+          VERSION="${VERSION#v}"
           echo "$GH_TOKEN" | helm registry login ghcr.io -u "$ACTOR" --password-stdin
           helm package . --version "$VERSION"
           helm push ./*.tgz "oci://ghcr.io/${OWNER}/charts"

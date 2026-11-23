@@ -1,0 +1,39 @@
+# Reusable: run a Python project's unittest suite on one Python version.
+# For standard-library-only tools: nothing is pip-installed, so a test that
+# passes here passes in the image.
+#
+# Callers:
+#   jobs:
+#     python:
+#       uses: sharkops-io/.github/.github/workflows/python.yml@main
+#       with: { tests: tests }      # the directory `python -m unittest` runs in
+name: python
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        type: string
+        default: "3.14"
+      tests:
+        description: Directory to run `python -m unittest discover` in
+        type: string
+        default: tests
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ inputs.python-version }}
+      - name: unittest
+        working-directory: ${{ inputs.tests }}
+        run: python -m unittest discover -v
